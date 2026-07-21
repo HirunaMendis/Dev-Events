@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 
 const uri = process.env.MONGODB_URI;
 
@@ -6,18 +6,39 @@ if (!uri) {
   throw new Error("Missing MONGODB_URI in environment variables.");
 }
 
-const globalForMongo = globalThis as typeof globalThis & {
-  mongoClientPromise?: Promise<MongoClient>;
+const mongoUri = uri;
+
+type MongooseCache = {
+  connection: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
 };
 
-export const mongoClient =
-  globalForMongo.mongoClientPromise ?? new MongoClient(uri).connect();
+const globalForMongoose = globalThis as typeof globalThis & {
+  mongooseCache?: MongooseCache;
+};
 
-if (process.env.NODE_ENV !== "production") {
-  globalForMongo.mongoClientPromise = mongoClient;
-}
+const cache = globalForMongoose.mongooseCache ?? {
+  connection: null,
+  promise: null,
+};
 
-export async function getDatabase() {
-  const client = await mongoClient;
-  return client.db(process.env.MONGODB_DB ?? "dev-events");
+globalForMongoose.mongooseCache = cache;
+
+export async function connectDB(): Promise<typeof mongoose> {
+  if (cache.connection) {
+    return cache.connection;
+  }
+
+  cache.promise ??= mongoose.connect(mongoUri, {
+    bufferCommands: false,
+    dbName: process.env.MONGODB_DB ?? "dev-events",
+  });
+
+  try {
+    cache.connection = await cache.promise;
+    return cache.connection;
+  } catch (error) {
+    cache.promise = null;
+    throw error;
+  }
 }
