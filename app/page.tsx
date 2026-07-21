@@ -1,10 +1,24 @@
 import React from 'react'
 import ExploreBtn from "@/components/ExploreBtn";
 import EventCard from "@/components/EventCard";
-import { events } from "@/lib/constants";
+import { events as fallbackEvents } from "@/lib/constants";
+import { getEvents } from "@/lib/events";
+import { connection } from "next/server";
 
 
-const Page = () => {
+const Page = async () => {
+    await connection();
+    let events = fallbackEvents;
+
+    try {
+        const databaseEvents = await getEvents();
+        if (databaseEvents.length > 0) {
+            events = databaseEvents;
+        }
+    } catch {
+        // The initial UI remains available before MongoDB has been seeded.
+    }
+
     return (
         <section>
             <h1 className="text-center">The Hub for Every Dev<br/> Event You Can't Miss.</h1>
