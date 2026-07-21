@@ -7,6 +7,12 @@ export interface IEvent {
   location: string;
   date: string;
   time: string;
+  description: string;
+  agenda: string[];
+  about: string;
+  tags: string[];
+  mode: string;
+  audience: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -55,6 +61,37 @@ const eventSchema = new Schema<IEvent>(
     time: {
       type: String,
       required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 20,
+      maxlength: 4000,
+    },
+    agenda: {
+      type: [String],
+      default: [],
+    },
+    about: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 4000,
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    mode: {
+      type: String,
+      default: "In-person",
+      trim: true,
+    },
+    audience: {
+      type: String,
+      default: "Developers and technology professionals",
       trim: true,
     },
   },
