@@ -1,42 +1,23 @@
-import type { WithId } from "mongodb";
-import { getDatabase } from "@/lib/mongodb";
+import { Event as EventModel, type IEvent } from "@/database";
+import { connectDB } from "@/lib/mongodb";
 
-export interface Event {
-  title: string;
-  image: string;
-  slug: string;
-  location: string;
-  date: string;
-  time: string;
-}
+export type Event = Pick<IEvent, "title" | "image" | "slug" | "location" | "date" | "time">;
 
-interface EventDocument extends Event {
-  createdAt: Date;
-}
-
-const collectionName = "events";
-
-function toEvent({ _id: _ignored, createdAt: _createdAt, ...event }: WithId<EventDocument>): Event {
-  return event;
+function toEvent(document: IEvent): Event {
+  const { title, image, slug, location, date, time } = document;
+  return { title, image, slug, location, date, time };
 }
 
 export async function getEvents(): Promise<Event[]> {
-  const database = await getDatabase();
-  const documents = await database
-    .collection<EventDocument>(collectionName)
-    .find({})
-    .sort({ createdAt: -1 })
-    .toArray();
+  await connectDB();
+  const documents = await EventModel.find({}).sort({ createdAt: -1 }).lean<IEvent[]>();
 
   return documents.map(toEvent);
 }
 
 export async function createEvent(event: Event): Promise<Event> {
-  const database = await getDatabase();
-  const collection = database.collection<EventDocument>(collectionName);
+  await connectDB();
+  const document = await EventModel.create(event);
 
-  await collection.createIndex({ slug: 1 }, { unique: true });
-  await collection.insertOne({ ...event, createdAt: new Date() });
-
-  return event;
+  return toEvent(document.toObject());
 }
