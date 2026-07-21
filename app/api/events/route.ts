@@ -2,7 +2,7 @@ import { createEvent, getEvents, type Event } from "@/lib/events";
 
 export const runtime = "nodejs";
 
-const eventFields = ["title", "image", "slug", "location", "date", "time"] as const;
+const eventFields = ["title", "image", "slug", "location", "date", "time", "description"] as const;
 
 function isEvent(value: unknown): value is Event {
   if (!value || typeof value !== "object") {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     if (!isEvent(body)) {
       return Response.json(
-        { error: "title, image, slug, location, date, and time are required." },
+        { error: "title, image, slug, location, date, time, and description are required." },
         { status: 400 },
       );
     }
