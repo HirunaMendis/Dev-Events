@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import EventCard from "@/components/EventCard";
 import BookingForm from "@/components/BookingForm";
-import { getEventBySlug, getEvents } from "@/lib/events";
+import { getEventBySlug } from "@/lib/events";
+import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
 
 export const runtime = "nodejs";
 
@@ -21,9 +22,7 @@ export default async function EventPage({
     notFound();
   }
 
-  const similarEvents = (await getEvents())
-    .filter((candidate) => candidate.slug !== event.slug)
-    .slice(0, 3);
+  const similarEvents = await getSimilarEventsBySlug(event.slug);
 
   return (
     <section id="event">
