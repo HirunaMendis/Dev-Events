@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 
 const Navbar = () => {
-    // @ts-ignore
     return (
 
         <header>
@@ -16,9 +15,7 @@ const Navbar = () => {
 
                 <ul>
                     <Link href="/">Home</Link>
-                    <Link href="/">Events</Link>
-                    <Link href="/">Create</Link>
-                    {/*<Link href="/">Home</Link>*/}
+                    <Link href="/#events">Events</Link>
                 </ul>
             </nav>
 
