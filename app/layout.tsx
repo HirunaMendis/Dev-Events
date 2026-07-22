@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Schibsted_Grotesk , Martian_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import ChatWidget from "@/components/ChatWidget";
 import LightRays from "@/components/LightRays";
 import Navbar from "@/components/Navbar";
 
@@ -59,7 +60,7 @@ export default function RootLayout({
 
         </main>
 
-
+        <ChatWidget />
 
       </body>
     </html>
