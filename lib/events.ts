@@ -1,5 +1,6 @@
 import { Event as EventModel, type IEvent } from "@/database";
-import { connectDB } from "@/lib/mongodb";
+import { connectDB, tryConnectDB } from "@/lib/mongodb";
+import { seedEvents } from "@/lib/seed-events";
 
 export type Event = Pick<
   IEvent,
@@ -23,17 +24,31 @@ function toEvent(document: IEvent): Event {
 }
 
 export async function getEvents(): Promise<Event[]> {
-  await connectDB();
-  const documents = await EventModel.find({}).sort({ createdAt: -1 }).lean<IEvent[]>();
+  const db = await tryConnectDB();
+  if (!db) {
+    return seedEvents as Event[];
+  }
 
-  return documents.map(toEvent);
+  const documents = await EventModel.find({}).sort({ createdAt: -1 }).lean<IEvent[]>();
+  if (documents.length > 0) {
+    return documents.map(toEvent);
+  }
+
+  return seedEvents as Event[];
 }
 
 export async function getEventBySlug(slug: string): Promise<Event | null> {
-  await connectDB();
-  const document = await EventModel.findOne({ slug }).lean<IEvent | null>();
+  const db = await tryConnectDB();
+  if (!db) {
+    return (seedEvents as Event[]).find((event) => event.slug === slug) ?? null;
+  }
 
-  return document ? toEvent(document) : null;
+  const document = await EventModel.findOne({ slug }).lean<IEvent | null>();
+  if (document) {
+    return toEvent(document);
+  }
+
+  return (seedEvents as Event[]).find((event) => event.slug === slug) ?? null;
 }
 
 export async function createEvent(event: Event): Promise<Event> {

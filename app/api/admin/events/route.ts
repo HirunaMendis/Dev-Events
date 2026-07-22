@@ -1,5 +1,7 @@
+ import { auth } from "@/auth";
 import { Event } from "@/database";
-import { connectDB } from "@/lib/mongodb";
+import { createLocalEvent } from "@/lib/local-events";
+import { tryConnectDB } from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,11 @@ function stringList(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return Response.json({ error: "Unauthorised." }, { status: 401 });
+  }
+
   try {
     const body: unknown = await request.json();
 
@@ -41,15 +48,14 @@ export async function POST(request: Request) {
     const title = data.title as string;
     const image = (data.image as string).trim();
 
-    if (!image.startsWith("/")) {
+    if (!image.startsWith("/") && !image.startsWith("https://")) {
       return Response.json(
         { error: "Upload an event image before saving." },
         { status: 400 },
       );
     }
 
-    await connectDB();
-    const event = await Event.create({
+    const eventData = {
       title: title.trim(),
       slug: toSlug(title),
       location: (data.location as string).trim(),
@@ -65,7 +71,22 @@ export async function POST(request: Request) {
         typeof data.audience === "string" && data.audience.trim()
           ? data.audience.trim()
           : "Developers and technology professionals",
-    });
+    };
+
+    const db = await tryConnectDB();
+
+    if (!db) {
+      const local = await createLocalEvent(eventData);
+      if (!local.ok) {
+        return Response.json({ error: local.error }, { status: local.status });
+      }
+      return Response.json(
+        { event: { slug: local.event.slug, title: local.event.title } },
+        { status: 201 },
+      );
+    }
+
+    const event = await Event.create(eventData);
 
     return Response.json({ event: { slug: event.slug, title: event.title } }, { status: 201 });
   } catch (error) {
