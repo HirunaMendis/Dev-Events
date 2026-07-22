@@ -17,9 +17,11 @@ function isEvent(value: unknown): value is Event {
 
 export async function GET() {
   try {
-    return Response.json(await getEvents());
-  } catch {
-    return Response.json({ error: "Unable to load events." }, { status: 500 });
+    const events = await getEvents();
+    return Response.json(events);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load events.";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 

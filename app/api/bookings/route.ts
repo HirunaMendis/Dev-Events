@@ -1,5 +1,6 @@
 import { Booking, Event } from "@/database";
-import { connectDB } from "@/lib/mongodb";
+import { createLocalBooking } from "@/lib/local-bookings";
+import { tryConnectDB } from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
@@ -23,17 +24,26 @@ export async function POST(request: Request) {
       return Response.json({ error: "Enter a valid email address." }, { status: 400 });
     }
 
-    await connectDB();
+    const normalizedEmail = email.trim().toLowerCase();
+    const db = await tryConnectDB();
+
+    if (!db) {
+      const local = await createLocalBooking(eventSlug, normalizedEmail);
+      if (!local.ok) {
+        return Response.json({ error: local.error }, { status: local.status });
+      }
+      return Response.json({ message: local.message }, { status: 201 });
+    }
+
     const event = await Event.findOne({ slug: eventSlug }).select("_id");
 
     if (!event) {
       return Response.json({ error: "Event not found." }, { status: 404 });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
     await Booking.create({
       eventId: event._id,
-      name: normalizedEmail.split("@")[0],
+      name: normalizedEmail.split("@")[0] || "guest",
       email: normalizedEmail,
     });
 
@@ -43,6 +53,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "This email is already registered for this event." }, { status: 409 });
     }
 
-    return Response.json({ error: "Unable to create booking." }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unable to create booking.";
+    return Response.json({ error: message }, { status: 500 });
   }
 }

@@ -1,8 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-    // cacheComponents: true,
-
+  // cacheComponents: true,
+  images: {
+    localPatterns: [
+      { pathname: "/images/**" },
+      { pathname: "/icons/**" },
+      { pathname: "/uploads/**" },
+    ],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

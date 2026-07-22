@@ -1,6 +1,6 @@
+import { auth } from "@/auth";
+import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 
 export const runtime = "nodejs";
 
@@ -12,6 +12,11 @@ const extensions = new Map([
 ]);
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return Response.json({ error: "Unauthorised." }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const image = formData.get("image");
@@ -30,13 +35,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "Images must be 5 MB or smaller." }, { status: 400 });
     }
 
-    const uploadsDirectory = path.join(process.cwd(), "public", "uploads");
     const fileName = `${randomUUID()}.${extension}`;
+    const blob = await put(fileName, image, { access: "public", addRandomSuffix: false });
 
-    await mkdir(uploadsDirectory, { recursive: true });
-    await writeFile(path.join(uploadsDirectory, fileName), Buffer.from(await image.arrayBuffer()));
-
-    return Response.json({ path: `/uploads/${fileName}` }, { status: 201 });
+    return Response.json({ path: blob.url }, { status: 201 });
   } catch {
     return Response.json({ error: "Unable to upload image." }, { status: 500 });
   }
