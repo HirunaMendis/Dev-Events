@@ -1,9 +1,63 @@
 "use client";
 
 import { MessageCircle, X } from "lucide-react";
-import { FormEvent, useRef, useState } from "react";
+import { Fragment, FormEvent, ReactNode, useRef, useState } from "react";
 
 type ChatMessage = { role: "user" | "model"; text: string };
+
+function renderInline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={index}>{part.slice(2, -2)}</strong>
+    ) : (
+      <Fragment key={index}>{part}</Fragment>
+    ),
+  );
+}
+
+/** Converts the small subset of markdown Gemini tends to use (bold, bullets, headings) into plain elements. */
+function renderMarkdownLite(text: string): ReactNode {
+  const blocks: ReactNode[] = [];
+  let listItems: string[] = [];
+
+  function flushList() {
+    if (listItems.length === 0) return;
+    blocks.push(
+      <ul className="list-disc space-y-1 pl-4" key={`ul-${blocks.length}`}>
+        {listItems.map((item, index) => (
+          <li key={index}>{renderInline(item)}</li>
+        ))}
+      </ul>,
+    );
+    listItems = [];
+  }
+
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+
+    if (!line || /^-{3,}$/.test(line)) {
+      flushList();
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[*-]\s+(.*)$/);
+    if (bulletMatch) {
+      listItems.push(bulletMatch[1]);
+      continue;
+    }
+
+    const headingMatch = line.match(/^#{1,6}\s+(.*)$/);
+    flushList();
+    blocks.push(
+      <p className="m-0 first:mt-0" key={blocks.length}>
+        {headingMatch ? <strong>{renderInline(headingMatch[1])}</strong> : renderInline(line)}
+      </p>,
+    );
+  }
+
+  flushList();
+  return <div className="space-y-2">{blocks}</div>;
+}
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -70,7 +124,7 @@ export default function ChatWidget() {
                     : "mr-auto max-w-[85%] rounded-[8px] bg-dark-200 px-3 py-2 text-sm text-light-100"
                 }
               >
-                {entry.text}
+                {entry.role === "model" ? renderMarkdownLite(entry.text) : entry.text}
               </div>
             ))}
             {isSending && <div className="mr-auto max-w-[85%] rounded-[8px] bg-dark-200 px-3 py-2 text-sm text-light-200">Thinking…</div>}
